@@ -14,7 +14,7 @@ rather than a claim.
 from __future__ import annotations
 
 from lib_kernel_ir.ops import EXACT, OPS, ROUNDS, Cost, Op
-from lib_kernel_ir.term import Leaf, Term, qgemv, shifts
+from lib_kernel_ir.term import Leaf, Term, from_json, qgemv, shifts, to_json
 
 __all__ = [
     "EXACT",
@@ -24,6 +24,8 @@ __all__ = [
     "Leaf",
     "Op",
     "Term",
+    "from_json",
     "qgemv",
     "shifts",
+    "to_json",
 ]

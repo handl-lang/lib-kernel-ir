@@ -24,6 +24,7 @@ can be chosen by model instead of by measurement.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -32,7 +33,7 @@ import torch
 
 from .ops import OPS, Cost
 
-__all__ = ["Leaf", "Term", "qgemv", "shifts"]
+__all__ = ["Leaf", "Term", "from_json", "qgemv", "shifts", "to_json"]
 
 
 @dataclass(frozen=True)
@@ -94,6 +95,46 @@ def _leaf_value(leaf: Leaf, env, kr):
         # it does not require alignment).
         return value.repeat_interleave(leaf.div, dim=0)[lo:hi]
     raise ValueError(f"leaf {leaf.name!r}: unknown kind {leaf.kind!r}")
+
+
+def to_json(term: Term | Leaf) -> str:
+    """Serialise a term to the wire form `compile-triton` reads.
+
+    The IR is data, so it has to survive leaving the process: this is the
+    boundary the Rust lowering consumes, and nothing in it is specific to
+    Triton.
+    """
+    return json.dumps(_encode(term), sort_keys=False)
+
+
+def from_json(raw: str) -> Term | Leaf:
+    """Rebuild a term from :func:`to_json` output."""
+    return _decode(json.loads(raw))
+
+
+def _encode(node: Any) -> Any:
+    if isinstance(node, Term):
+        return {"op": node.op, "args": [_encode(a) for a in node.args]}
+    if isinstance(node, Leaf):
+        return {
+            "leaf": {"name": node.name, "kind": node.kind, "div": node.div}
+        }
+    if isinstance(node, (int, float, str)):
+        return node
+    raise TypeError(f"cannot serialise {type(node).__name__} in a term")
+
+
+def _decode(obj: Any) -> Any:
+    if isinstance(obj, dict):
+        if "op" in obj:
+            return Term(obj["op"], tuple(_decode(a) for a in obj["args"]))
+        if "leaf" in obj:
+            leaf = obj["leaf"]
+            return Leaf(
+                leaf["name"], leaf.get("kind", "out"), int(leaf.get("div", 1))
+            )
+        raise ValueError(f"unrecognised node {obj!r}")
+    return obj
 
 
 def qgemv(k: int, split: int, group: int = 128) -> Term:
