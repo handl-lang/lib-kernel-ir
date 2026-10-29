@@ -50,8 +50,8 @@ def wide_reference(env, group: int) -> torch.Tensor:
 # -- the vocabulary (M0 gate) ----------------------------------------------
 
 
-def test_the_ir_is_nine_ops() -> None:
-    assert len(OPS) == 9
+def test_the_ir_is_ten_ops() -> None:
+    assert len(OPS) == 10
     assert set(OPS) == {
         "tile_load",
         "unpack_i4",
@@ -62,6 +62,7 @@ def test_the_ir_is_nine_ops() -> None:
         "reduce",
         "store",
         "bias",
+        "pipeline",
     }
 
 
@@ -177,3 +178,25 @@ def test_unknown_op_is_refused() -> None:
 def test_qgemv_requires_group_divisible_k() -> None:
     with pytest.raises(ValueError, match="not a multiple"):
         qgemv(k=500, split=2, group=128)
+
+
+# -- ADR-0166: a schedule annotation that means the identity -------------
+
+
+def test_pipeline_denotes_the_identity() -> None:
+    env, _ = awq_env(k=512, n=64)
+    plain = qgemv(k=512, split=2).denote(env)
+    deep = qgemv(k=512, split=2, depth=4).denote(env)
+    torch.testing.assert_close(plain, deep)
+
+
+def test_pipeline_does_not_change_the_cost_bound() -> None:
+    env, _ = awq_env(k=512, n=64)
+    a = qgemv(k=512, split=2).cost(env)
+    b = qgemv(k=512, split=2, depth=4).cost(env)
+    assert a.to_dict() == b.to_dict(), (a, b)
+
+
+def test_pipeline_rejects_zero_depth() -> None:
+    with pytest.raises(ValueError, match="depth"):
+        qgemv(k=512, split=2, depth=0)

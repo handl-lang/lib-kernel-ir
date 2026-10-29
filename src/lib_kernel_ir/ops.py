@@ -14,8 +14,8 @@ rank candidates (ADR-0165 rule 6).
 
     >>> from lib_kernel_ir.ops import OPS
     >>> sorted(OPS)
-    ['bias', 'dequant', 'dot', 'reduce', 'split', 'stage', 'store', \
-'tile_load', 'unpack_i4']
+    ['bias', 'dequant', 'dot', 'pipeline', 'reduce', 'split', 'stage', \
+'store', 'tile_load', 'unpack_i4']
 """
 
 from __future__ import annotations
@@ -178,6 +178,25 @@ def _bias(tile: torch.Tensor, bias: torch.Tensor) -> torch.Tensor:
     return tile + bias
 
 
+def _pipeline(depth: int, body: torch.Tensor) -> torch.Tensor:
+    """A scheduling annotation: prefetch ``depth`` stages of the k-loop.
+
+    Semantically the identity — that is the point. A schedule changes when
+    bytes arrive, never which bytes, so the denotation is unchanged and the
+    four `split_k` variants stay provably equal while their costs move.
+    """
+    if depth < 1:
+        raise ValueError(f"pipeline depth must be >= 1, got {depth}")
+    return body
+
+
+def _pipeline_cost(depth: int, body: torch.Tensor) -> Cost:
+    # No extra traffic and no extra launch: the depth buys overlap inside
+    # the existing dispatch. Understating it is deliberate — cost is a lower
+    # bound, and the referee decides whether the overlap materialised.
+    return Cost()
+
+
 #: The IR. Frozen, nine entries; extension requires an ADR.
 OPS: Mapping[str, Op] = {
     "tile_load": Op(
@@ -231,5 +250,14 @@ OPS: Mapping[str, Op] = {
         _bias_cost,
         _bias,
     ),
+    "pipeline": Op(
+        "pipeline",
+        "depth, body -> body (scheduled)",
+        EXACT,
+        _pipeline_cost,
+        _pipeline,
+    ),
 }
-assert len(OPS) == 9, "the IR is nine ops (ADR-0165 rule 2)"
+#: Ten, not nine: `pipeline` was added by ADR-0166 because the review's
+#: objection was that a schedule-free IR can only express naive schedules.
+assert len(OPS) == 10, "the IR is ten ops (ADR-0165 + ADR-0166)"

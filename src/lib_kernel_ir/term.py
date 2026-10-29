@@ -137,14 +137,18 @@ def _decode(obj: Any) -> Any:
     return obj
 
 
-def qgemv(k: int, split: int, group: int = 128) -> Term:
+def qgemv(k: int, split: int, group: int = 128, depth: int = 1) -> Term:
     """The GEMV term with ``split`` k-partitions.
 
     ``split=1`` is a one-partition split, not a separate shape, so all four
-    variants share one composed denotation by construction.
+    variants share one composed denotation by construction. ``depth`` wraps
+    the body in a `pipeline` annotation, which denotes the identity: a
+    schedule changes when bytes arrive, never which bytes.
     """
     if k % group:
         raise ValueError(f"k={k} is not a multiple of group={group}")
+    if depth < 1:
+        raise ValueError(f"pipeline depth must be >= 1, got {depth}")
     body = Term(
         "dot",
         (
@@ -163,6 +167,8 @@ def qgemv(k: int, split: int, group: int = 128) -> Term:
             Leaf("x", "k"),
         ),
     )
+    if depth > 1:
+        body = Term("pipeline", (depth, body))
     return Term(
         "store",
         (
@@ -183,6 +189,9 @@ def _denote(term: Term, env, kr):
             OPS["stage"].denote(_denote(body, env, r)) for r in ranges
         ]
         return OPS["reduce"].denote(partials)
+    if op == "pipeline":
+        depth, body = term.args
+        return OPS["pipeline"].denote(int(depth), _denote(body, env, kr))
     values = [
         _denote(a, env, kr) if isinstance(a, (Term, Leaf)) else a
         for a in term.args
@@ -201,6 +210,11 @@ def _cost(term: Term, env, kr) -> Cost:
             total = total + part + OPS["stage"].cost(staged)
         last = _denote(body, env, ranges[-1])
         return total + OPS["reduce"].cost([last] * len(ranges))
+    if isinstance(term, Term) and term.op == "pipeline":
+        depth, body = term.args
+        return OPS["pipeline"].cost(int(depth), _denote(body, env, kr)) + _cost(
+            body, env, kr
+        )
     if isinstance(term, Leaf):
         return OPS["tile_load"].cost(_leaf_value(term, env, kr))
     values = [
