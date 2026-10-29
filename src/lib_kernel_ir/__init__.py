@@ -1,6 +1,6 @@
 """A kernel IR as data — the nine ops, their terms, and their denotations.
 
-ADR-0160: the kernel's combinators stay closed; the IR enters as a
+ADR-0165: the kernel's combinators stay closed; the IR enters as a
 `Language` and is interpreted by an engine. Every op carries a signature, a
 grade, a cost and a torch denotation, so two terms being equal is a test
 rather than a claim.

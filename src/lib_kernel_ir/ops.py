@@ -1,6 +1,6 @@
 """The nine ops: signature, grade, cost, and a torch denotation each.
 
-Per ADR-0160 the set is closed. An op that is not here is not in the
+Per ADR-0165 the set is closed. An op that is not here is not in the
 kernel IR; if a kernel needs one, that is a finding about the platform,
 not a commit.
 
@@ -10,7 +10,7 @@ computable question (`cosine_gate`) rather than a slogan. The **grade**
 says what the op does to exactness: `EXACT` preserves bit-identity of
 its inputs, `ROUNDS` may round (accumulate/convert). The **cost** is a
 model — bytes, arithmetic, launches — used only as a hard bound, never to
-rank candidates (ADR-0160 rule 6).
+rank candidates (ADR-0165 rule 6).
 
     >>> from lib_kernel_ir.ops import OPS
     >>> sorted(OPS)
@@ -232,4 +232,4 @@ OPS: Mapping[str, Op] = {
         _bias,
     ),
 }
-assert len(OPS) == 9, "the IR is nine ops (ADR-0160 rule 2)"
+assert len(OPS) == 9, "the IR is nine ops (ADR-0165 rule 2)"

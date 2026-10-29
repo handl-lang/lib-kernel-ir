@@ -17,7 +17,7 @@ kernel's assumption (P22).
     >>> t4.cost(env).launches > t1.cost(env).launches
     True
 
-The cost is a **bound** (ADR-0160 rule 6): it prices bytes and launches so
+The cost is a **bound** (ADR-0165 rule 6): it prices bytes and launches so
 a candidate can be pruned against the roofline floor, never so a winner
 can be chosen by model instead of by measurement.
 """

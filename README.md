@@ -1,6 +1,6 @@
 # lib-kernel-ir
 
-The kernel IR as data (ADR-0160): nine ops, each with a signature, a grade,
+The kernel IR as data (ADR-0165): nine ops, each with a signature, a grade,
 a cost and a **torch denotation**, plus `Term` (op + args) so a kernel body
 is a value the search can range over.
 
