@@ -1,0 +1,18 @@
+# bupha.toml — committed CI manifest for handl-lang/lib-kernel-ir.
+#
+# Runner is this repo's ci.sh (uv sync --extra dev + pytest). Merge the
+# [[repos]] entry into the shared watcher (~/.config/bupha/bupha.toml) or
+# run: bupha watch --config bupha.toml
+
+[[repos]]
+name = "handl-lang/lib-kernel-ir"
+dir = "/home/luis/GitHub/handl-lang/lib-kernel-ir"
+branch = "refs/heads/main"
+  [repos.runner]
+  kind = "script"
+  cmd = "bash ci.sh"
+  cancel_running = true
+
+[status]
+kind = "github"
+context = "ci/bupha"
