@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
+
+# myco worktree mount point (created by `myco init`)
+project/
