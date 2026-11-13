@@ -197,7 +197,7 @@ def _pipeline_cost(depth: int, body: torch.Tensor) -> Cost:
     return Cost()
 
 
-#: The IR. Frozen, nine entries; extension requires an ADR.
+#: The IR. Frozen, ten entries; extension requires an ADR.
 OPS: Mapping[str, Op] = {
     "tile_load": Op(
         "tile_load", "tensor, idx -> tile", EXACT, _load_cost, lambda t: t
