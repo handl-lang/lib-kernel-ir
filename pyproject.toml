@@ -1,9 +1,10 @@
 [project]
 name = "lib-kernel-ir"
 version = "0.0.1"
-description = "The kernel IR as data: nine ops, grades, costs, torch denotations (ADR-0160)"
+description = "The kernel IR as data: ten ops, grades, costs, torch denotations (ADR-0160/0166)"
 readme = "README.md"
 requires-python = ">=3.11"
+license = "MIT OR Apache-2.0"
 dependencies = ["torch>=2.1"]
 
 [project.optional-dependencies]

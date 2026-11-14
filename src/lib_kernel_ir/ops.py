@@ -1,4 +1,4 @@
-"""The nine ops: signature, grade, cost, and a torch denotation each.
+"""The ten ops: signature, grade, cost, and a torch denotation each.
 
 Per ADR-0165 the set is closed. An op that is not here is not in the
 kernel IR; if a kernel needs one, that is a finding about the platform,
