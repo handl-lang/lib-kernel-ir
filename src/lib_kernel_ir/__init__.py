@@ -1,4 +1,4 @@
-"""A kernel IR as data — the nine ops, their terms, and their denotations.
+"""A kernel IR as data — the twenty-one ops, their terms, and their denotations.
 
 ADR-0165: the kernel's combinators stay closed; the IR enters as a
 `Language` and is interpreted by an engine. Every op carries a signature, a

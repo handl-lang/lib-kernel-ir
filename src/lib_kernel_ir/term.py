@@ -59,7 +59,7 @@ class Term:
 
     def __post_init__(self) -> None:
         if self.op not in OPS:
-            raise ValueError(f"{self.op!r} is not one of the nine IR ops")
+            raise ValueError(f"{self.op!r} is not a kernel-ir op")
 
     # -- meaning ---------------------------------------------------
     def denote(self, env: Mapping[str, torch.Tensor]) -> torch.Tensor:

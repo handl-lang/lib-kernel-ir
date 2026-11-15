@@ -38,7 +38,7 @@ def test_leaf_div_survives() -> None:
 def test_bad_payload_is_refused() -> None:
     with pytest.raises(ValueError, match="unrecognised node"):
         from_json('{"nonsense": 1}')
-    with pytest.raises(ValueError, match="not one of the nine"):
+    with pytest.raises(ValueError, match="not a kernel-ir op"):
         from_json('{"op": "matmul", "args": []}')
 
 

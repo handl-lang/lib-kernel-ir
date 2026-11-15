@@ -1,14 +1,18 @@
 # lib-kernel-ir
 
-The kernel IR as data (ADR-0160/0165, extended by ADR-0166): **ten
-ops**, each with a signature, a grade, a cost and a **torch
-denotation**, plus `Term` (op + args) so a kernel body is a value the
-search can range over.
+The kernel IR as data (ADR-0160/0165, extended by ADR-0166 and —
+pending ratification — ADR-0171): **twenty-one ops**, each with a
+signature, a grade, a cost and a **torch denotation**, plus `Term`
+(op + args) so a kernel body is a value the search can range over.
 
 `split` is one op — `n_parts` is a parameter, not a flag: all four
 variants share a composed denotation, so "exact" is a test rather
 than a hope. (`pipeline`, the tenth op, was added by ADR-0166 — a
-schedule-free IR can only express naive schedules.)
+schedule-free IR can only express naive schedules. ADR-0171 added
+eleven more — `transpose`/`permute` layout views and the pointwise
+set `mul`/`sub`/`neg`/`relu`/`exp`/`sigmoid`/`tanh`/`gelu`/`silu` —
+because the mlopt-IR bridge measured them as the blocking coverage
+gap.)
 
 ## Install
 

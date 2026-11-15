@@ -1,8 +1,11 @@
-"""The ten ops: signature, grade, cost, and a torch denotation each.
+"""The twenty-one ops: signature, grade, cost, and a torch denotation each.
 
-Per ADR-0165 the set is closed. An op that is not here is not in the
-kernel IR; if a kernel needs one, that is a finding about the platform,
-not a commit.
+Per ADR-0165 the set is closed; ADR-0171 (proposed) extended it with the
+layout ops (`transpose`, `permute`) and the pointwise ops (`mul`, `sub`,
+`neg`, `relu`, `exp`, `sigmoid`, `tanh`, `gelu`, `silu`) because the
+mlopt-IR bridge measured them as the blocking gap. An op that is not here
+is not in the kernel IR; if a kernel needs one, that is a finding about
+the platform, not a commit.
 
 The **denotation** is the meaning of one application of the op: a plain
 torch function, written once, so that "two terms are equal" is a
@@ -14,8 +17,9 @@ rank candidates (ADR-0165 rule 6).
 
     >>> from lib_kernel_ir.ops import OPS
     >>> sorted(OPS)
-    ['bias', 'dequant', 'dot', 'pipeline', 'reduce', 'split', 'stage', \
-'store', 'tile_load', 'unpack_i4']
+    ['bias', 'dequant', 'dot', 'exp', 'gelu', 'mul', 'neg', 'permute', \
+'pipeline', 'reduce', 'relu', 'sigmoid', 'silu', 'split', 'stage', \
+'store', 'sub', 'tanh', 'tile_load', 'transpose', 'unpack_i4']
 """
 
 from __future__ import annotations
@@ -24,6 +28,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 import torch
+from torch.nn import functional as F
 
 __all__ = ["EXACT", "ROUNDS", "Cost", "OPS", "Op"]
 
@@ -197,7 +202,91 @@ def _pipeline_cost(depth: int, body: torch.Tensor) -> Cost:
     return Cost()
 
 
-#: The IR. Frozen, ten entries; extension requires an ADR.
+# -- ADR-0171: layout and pointwise ops ------------------------------------
+#
+# The layout ops denote torch *views*: permute/transpose move no bytes in
+# the denotation, so they are priced at zero — the `pipeline` precedent.
+# A backend that materialises the relayout pays for it at lowering, which
+# is measured, not modelled.
+
+
+def _view_cost(*_args) -> Cost:
+    return Cost()
+
+
+def _broadcast_numel(*ts: torch.Tensor) -> int:
+    """Element count of the broadcast output of ``ts``."""
+    shape = torch.broadcast_shapes(*[tuple(t.shape) for t in ts])
+    n = 1
+    for d in shape:
+        n *= int(d)
+    return n
+
+
+def _bin_cost(a: torch.Tensor, b: torch.Tensor) -> Cost:
+    """Read both operands, write the broadcast output — 2 B/elem."""
+    n_out = _broadcast_numel(a, b)
+    return Cost(bytes_moved=2 * (_n(a) + _n(b) + n_out), ops=n_out)
+
+
+def _un_cost(a: torch.Tensor) -> Cost:
+    """Read the operand, write the result — 2 B/elem each way."""
+    return Cost(bytes_moved=4 * _n(a), ops=_n(a))
+
+
+def _transpose(t: torch.Tensor, dim0: int, dim1: int) -> torch.Tensor:
+    """Swap axes ``dim0``/``dim1`` — a view, exact."""
+    return t.transpose(int(dim0), int(dim1))
+
+
+def _permute(t: torch.Tensor, *dims: int) -> torch.Tensor:
+    """Reorder the axes by ``dims`` — a view, exact."""
+    if not dims:
+        raise ValueError("permute needs at least one dim")
+    if len(dims) != t.dim():
+        raise ValueError(
+            f"permute wants one dim per axis ({t.dim()}), got {len(dims)}"
+        )
+    return t.permute(*[int(d) for d in dims])
+
+
+def _mul(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    return a * b
+
+
+def _sub(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    return a - b
+
+
+def _neg(a: torch.Tensor) -> torch.Tensor:
+    return -a
+
+
+def _relu(a: torch.Tensor) -> torch.Tensor:
+    return torch.relu(a)
+
+
+def _exp(a: torch.Tensor) -> torch.Tensor:
+    return torch.exp(a)
+
+
+def _sigmoid(a: torch.Tensor) -> torch.Tensor:
+    return torch.sigmoid(a)
+
+
+def _tanh(a: torch.Tensor) -> torch.Tensor:
+    return torch.tanh(a)
+
+
+def _gelu(a: torch.Tensor) -> torch.Tensor:
+    return F.gelu(a)
+
+
+def _silu(a: torch.Tensor) -> torch.Tensor:
+    return F.silu(a)
+
+
+#: The IR. Frozen; extension requires an ADR (0165 → 0166 → 0171).
 OPS: Mapping[str, Op] = {
     "tile_load": Op(
         "tile_load", "tensor, idx -> tile", EXACT, _load_cost, lambda t: t
@@ -257,7 +346,35 @@ OPS: Mapping[str, Op] = {
         _pipeline_cost,
         _pipeline,
     ),
+    # -- ADR-0171 ---------------------------------------------------------
+    "transpose": Op(
+        "transpose",
+        "tensor, dim0, dim1 -> tensor (axes swapped)",
+        EXACT,
+        _view_cost,
+        _transpose,
+    ),
+    "permute": Op(
+        "permute",
+        "tensor, dims... -> tensor (axes reordered)",
+        EXACT,
+        _view_cost,
+        _permute,
+    ),
+    "mul": Op("mul", "a, b -> a * b (broadcast)", ROUNDS, _bin_cost, _mul),
+    "sub": Op("sub", "a, b -> a - b (broadcast)", ROUNDS, _bin_cost, _sub),
+    "neg": Op("neg", "a -> -a", EXACT, _un_cost, _neg),
+    "relu": Op("relu", "a -> max(a, 0)", EXACT, _un_cost, _relu),
+    "exp": Op("exp", "a -> exp(a)", ROUNDS, _un_cost, _exp),
+    "sigmoid": Op(
+        "sigmoid", "a -> sigmoid(a)", ROUNDS, _un_cost, _sigmoid
+    ),
+    "tanh": Op("tanh", "a -> tanh(a)", ROUNDS, _un_cost, _tanh),
+    "gelu": Op("gelu", "a -> gelu(a)", ROUNDS, _un_cost, _gelu),
+    "silu": Op(
+        "silu", "a -> silu(a) = a * sigmoid(a)", ROUNDS, _un_cost, _silu
+    ),
 }
-#: Ten, not nine: `pipeline` was added by ADR-0166 because the review's
-#: objection was that a schedule-free IR can only express naive schedules.
-assert len(OPS) == 10, "the IR is ten ops (ADR-0165 + ADR-0166)"
+#: Twenty-one: ten through ADR-0165/0166, eleven more by ADR-0171
+#: (layout + pointwise — the measured mlopt-bridge gap).
+assert len(OPS) == 21, "the IR is twenty-one ops (ADR-0165/0166/0171)"
