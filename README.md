@@ -1,42 +1,43 @@
 # lib-kernel-ir
 
-The kernel IR as data (ADR-0160/0165, extended by ADR-0166 and —
-pending ratification — ADR-0171): **twenty-one ops**, each with a
-signature, a grade, a cost and a **torch denotation**, plus `Term`
-(op + args) so a kernel body is a value the search can range over.
+The kernel IR as data: **twenty-one ops**, each with a signature, a grade,
+a cost and a **torch denotation**, plus `Term` (op + args) so a kernel
+body is a value the search can range over.
 
 `split` is one op — `n_parts` is a parameter, not a flag: all four
-variants share a composed denotation, so "exact" is a test rather
-than a hope. (`pipeline`, the tenth op, was added by ADR-0166 — a
-schedule-free IR can only express naive schedules. ADR-0171 added
-eleven more — `transpose`/`permute` layout views and the pointwise
-set `mul`/`sub`/`neg`/`relu`/`exp`/`sigmoid`/`tanh`/`gelu`/`silu` —
-because the mlopt-IR bridge measured them as the blocking coverage
-gap.)
+variants share a composed denotation, so "exact" is a test rather than a
+hope. `pipeline` is the schedule op — a schedule-free IR can only express
+naive schedules. The pointwise set (`mul`/`sub`/`neg`/`relu`/`exp`/
+`sigmoid`/`tanh`/`gelu`/`silu`) and the layout views (`transpose`/
+`permute`) round out the surface.
 
-## Install
+## Packages
 
-```bash
-uv pip install "lib-kernel-ir @ git+https://github.com/handl-lang/lib-kernel-ir.git@v0.1.0"
-# or, from a checkout:
-uv pip install -e .
+- `lib_kernel_ir` (`src/lib_kernel_ir`) — the IR: `OPS` maps each op name
+  to its `Op` record (signature, grade, cost, torch denotation);
+  `Term(op, *args)` builds a kernel body.
+
+## Develop
+
+```sh
+uv sync --group dev
 ```
 
-## Use
+or as a git dependency:
 
-```python
-from lib_kernel_ir import Cost, Term, ops
-
-# OPS maps each op name to its Op record (signature, grade, cost,
-# torch denotation); Term(op, *args) builds a kernel body.
+```toml
+lib-kernel-ir = { git = "https://github.com/handl-lang/lib-kernel-ir.git", tag = "v0.1.0" }
 ```
 
-## Test
+## Verify
 
-```bash
-pytest -q          # needs torch; no GPU
+```sh
+uv run scripts/gate.py      # pytest → ruff → ty → lint-imports → coverage floor
 ```
 
-Dual-licensed MIT OR Apache-2.0 — see `LICENSE-MIT` / `LICENSE-APACHE`.
-Consumed by `handl-lang/kernelopt` (`mlopt_kernel.search`) and the
-kit-kernel-ir toolchain.
+`scripts/gate.py` is a stdlib runner over the dev toolchain; `ci.sh` is the
+gate entry. Keep only the steps the repo configures (check `pyproject.toml`).
+
+## License
+
+MIT.
