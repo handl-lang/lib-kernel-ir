@@ -1,0 +1,11 @@
+-- lib-kernel-ir: transitional python package (`lib_kernel_ir`) —
+-- the kernel IR as data: ops with signatures, grades, costs and torch
+-- denotations. No .hnl module surface yet, so `modules` is empty.
+{
+  modules: [],
+  name: "kernel-ir",
+  description: "The kernel IR as data (python) — op records with signature, grade, cost and torch denotation; Term(op, *args) kernel bodies.",
+  license: "MIT",
+  keywords: ["kernel", "ir", "torch", "python", "transitional"],
+  homepage: "https://github.com/handl-lang/lib-kernel-ir",
+}
