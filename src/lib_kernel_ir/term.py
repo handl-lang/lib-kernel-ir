@@ -98,7 +98,7 @@ def _leaf_value(leaf: Leaf, env, kr):
 
 
 def to_json(term: Term | Leaf) -> str:
-    """Serialise a term to the wire form `compile-triton` reads.
+    """Serialise a term to the wire form `tool-compile-triton` reads.
 
     The IR is data, so it has to survive leaving the process: this is the
     boundary the Rust lowering consumes, and nothing in it is specific to

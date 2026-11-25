@@ -15,7 +15,7 @@ def test_round_trip_preserves_the_term() -> None:
 
 
 def test_wire_form_is_what_the_rust_lowering_reads() -> None:
-    """Shape asserted here so a change cannot silently break `compile-triton`."""
+    """Shape asserted here so a change cannot silently break `tool-compile-triton`."""
     wire = json.loads(to_json(qgemv(k=4864, split=4)))
     assert wire["op"] == "store"
     split = wire["args"][0]
