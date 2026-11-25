@@ -35,7 +35,7 @@ lib-kernel-ir = { git = "https://github.com/handl-lang/lib-kernel-ir.git", tag =
 uv run scripts/gate.py      # pytest → ruff → ty → lint-imports → coverage floor
 ```
 
-`scripts/gate.py` is a stdlib runner over the dev toolchain; `ci.sh` is the
+`scripts/gate.py` is a stdlib runner over the dev toolchain; `workflows/gate.yaml` is the
 gate entry. Keep only the steps the repo configures (check `pyproject.toml`).
 
 ## License
